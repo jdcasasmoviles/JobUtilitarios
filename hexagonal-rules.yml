@@ -1,0 +1,47 @@
+# hexagonal-rules.yml
+validation:
+  level: strict # strict | moderate | lenient
+  
+  rules:
+    domain:
+      allowed_imports:
+        - "java.*"
+        - "jakarta.validation.*"
+        - "jakarta.persistence.*"  # Solo si realmente necesario
+      forbidden_imports:
+        - "jakarta.ws.*"
+        - "jakarta.transaction.*"
+        - "org.springframework.*"
+        - "io.quarkus.*"
+        
+    application:
+      allowed_imports:
+        - "java.*"
+        - "jakarta.enterprise.*"
+        - "jakarta.inject.*"
+        - "io.smallrye.mutiny.*"
+      must_implement: "domain.ports.*"
+      
+    infrastructure:
+      must_contain:
+        - "input/"
+        - "output/"
+      forbidden_in_domain: true
+      
+  file_naming_conventions:
+    ports: "*Port.java"
+    adapters: "*Adapter.java"
+    repositories: "*Repository.java"
+    usecases: "*UseCase.java"
+    
+  package_structure:
+    base_package: "com.ejemplo.pedidos"
+    layers:
+      domain: "{base}.domain"
+      application: "{base}.application"
+      infrastructure: "{base}.infrastructure"
+      
+  metrics:
+    max_domain_size_percent: 30%
+    min_test_coverage: 70%
+    max_cyclic_dependencies: 0

@@ -1,0 +1,15 @@
+Ejecutar desde Git Bash:
+
+Abre Git Bash (teclea "Git Bash" en el menú Inicio)
+
+Navega a tu proyecto: cd /c/ruta/a/tu/proyecto
+
+Dale permisos de ejecución: chmod +x hexagonal-validator.sh
+
+Ejecútalo: ./hexagonal-validator.sh
+
+# Para permitir scripts (solo una vez)
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+# Ejecutar el validador
+.\hexagonal-validator.ps1 -ProjectRoot "." -ValidationLevel "moderate"
