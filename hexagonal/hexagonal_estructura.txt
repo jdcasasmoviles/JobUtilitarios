@@ -1,0 +1,57 @@
+hexagonal-quarkus-mutiny/
+├── pom.xml
+├── README.md
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── example/
+│   │   │           └── messaging/
+│   │   │               ├── domain/
+│   │   │               │   ├── models/
+│   │   │               │   │   ├── Message.java
+│   │   │               │   │   └── MessageStatus.java
+│   │   │               │   └── ports/
+│   │   │               │       └── MessageEventPort.java
+│   │   │               ├── application/
+│   │   │               │   ├── dtos/
+│   │   │               │   │   ├── MessageRequest.java
+│   │   │               │   │   └── MessageResponse.java
+│   │   │               │   ├── ports/
+│   │   │               │   │   └── MessageServicePort.java
+│   │   │               │   └── services/
+│   │   │               │       └── MessageServiceImpl.java
+│   │   │               └── infrastructure/
+│   │   │                   ├── input/
+│   │   │                   │   └── rest/
+│   │   │                   │       ├── MessageResource.java
+│   │   │                   │       └── mappers/
+│   │   │                   │           └── MessageMapper.java
+│   │   │                   └── output/
+│   │   │                       ├── messaging/
+│   │   │                       │   └── KafkaMessageAdapter.java
+│   │   │                       └── event/
+│   │ │                           └── MessageEventAdapter.java
+│   │ └── resources/
+│   │     ├── application.properties
+│   │     └── META-INF/
+│   │         └── resources/
+│   │             └── index.html
+│   └── test/
+│       └── java/
+│           └── com/
+│               └── example/
+│                   └── messaging/
+│                       ├── domain/
+│                       │   └── models/
+│                       │       └── MessageTest.java
+│                       ├── application/
+│                       │   └── services/
+│                       │       └── MessageServiceImplTest.java
+│                       └── infrastructure/
+│                           ├── input/
+│                           │   └── rest/
+│                           │       └── MessageResourceTest.java
+│                           └── output/
+│                               └── messaging/
+│                                   └── KafkaMessageAdapterTest.java
