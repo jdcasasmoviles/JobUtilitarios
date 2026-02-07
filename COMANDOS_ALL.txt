@@ -156,9 +156,28 @@ docker ps -a
 docker rm personas-springboot-docker
 FORZADO BORRADO
 docker rm -f personas-springboot-docker
+--------------------------------------------------------------------------------
+------------------------DOCKER COMPOSE---------------------------------------------
+-----------------------------------------------------------------------------
+Eliminar contenedores previos
+docker compose down
 
 ubicamos en la ruta de docker-compose.yml y ejecutamos
+docker compose build
+
+Reconstruir sin cache
+docker compose build --no-cache
+
+levanttar servicios
 docker compose up -d
+
+Verificar que esté funcionando
+docker compose ps
+docker compose logs
+
+Detener todo
+docker compose down
+-----------------------------------------------------
 en win 7
 docker-compose up -d
 
