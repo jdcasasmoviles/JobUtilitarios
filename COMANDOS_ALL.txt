@@ -1,0 +1,167 @@
+-------------------------------------------------------------------------------------------------------------------------
+------------------------------COMANDOS GIT-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+git branch -a
+git checkout feature/SuperApp
+git pull origin feature/SuperApp
+
+git add -A && git commit -m "" && git push origin main
+-----------------------------------------------------------------------------------------------------------------------------
+git clone URL/name.git NombreProyecto
+Vamos a la carpeta creada,lista de branches que existen, tanto localmente como remotamente.
+git branch -a
+Creamos un nuevo branch localmente, basados en el branch remoto.
+git checkout -b develop origin/develop
+git checkout
+Hacemos un pull, para asegurarnos que nuestro nuevo branch, esté actualizado.
+git pull origin develop
+Para ver el estado
+git status
+Para subir nuestros cambios
+git add -A && git commit -m "init repo" && git push origin develop
+-------------------------------------------------------------------------------------------------------------------------
+------------------------------COMANDOS MONGO-----------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+https://www.mongodb.com/docs/mongodb-shell/crud/insert/#std-label-mongosh-insert
+
+Crear la carpeta
+C:\Program Files\MongoDB
+
+Y copiar todo el contenido del instalador 4.0.4 para win 7
+Crear la carpeta si no sea creado
+C:\data\db
+
+Iniciar el servicio
+mongod
+
+Verificar version 
+mongo --version
+
+Iniciar shell mongo
+mongo
+db
+use name_db
+
+Insertar
+db.clientes.insertMany([
+   {
+      id: 1,
+      nombre: "Jesus Casas",
+      empleo: "Analista",
+      edad: 33,
+      sexo: "masculino"
+    },
+      {
+      id: 2,
+      nombre: "Jazmin Perez",
+      empleo: "Funcional",
+      edad: 23,
+      sexo: "femenino"
+    },
+      {
+      id: 3,
+      nombre: "Frank Soto",
+      empleo: "Junior",
+      edad: 28,
+      sexo: "masculino"
+    }
+])
+
+db.clientes.find({})
+
+-------------------------------------------------------------------------------------------------------------------------
+------------------------------COMANDOS KAFKA-----------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+netstat -aon | findstr :8081
+taskkill /pid numPid /F
+
+cd C:\kafka_2.11-2.0.0
+inicia zookeeper
+.\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+
+Iniciar Apache Kafka
+.\bin\windows\kafka-server-start.bat .\config\server.properties
+
+Listar topicos
+.\bin\windows\kafka-topics.bat --list --zookeeper localhost:2181
+
+Describir topico
+.\bin\windows\kafka-topics.bat --describe --zookeeper localhost:2181
+
+borrar topico
+.\bin\windows\kafka-topics.bat --zookeeper localhost:2181 --delete --topic sol
+
+crear topico
+.\bin\windows\kafka-topics.bat --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic sol
+.\bin\windows\kafka-topics.bat --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic respuesta
+.\bin\windows\kafka-topics.bat --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic canal
+
+Crear productor
+.\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic sol
+.\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic respuesta
+.\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic canal
+
+Crear consumidor lista todos los mensajes
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic sol --from-beginning
+
+solo recibe los mensajes recientes
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic sol
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic respuesta
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic canal
+---------------------------------------------------------------------------------------------------------------------
+cd C:\kafka_2.12-3.6.1
+
+inicia zookeeper
+.\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+
+Iniciar Apache Kafka
+.\bin\windows\kafka-server-start.bat .\config\server.properties
+
+Listar topicos
+.\bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
+
+crear topico
+.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic sol --partitions 1 
+.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic respuesta --partitions 1 
+
+Crear productor
+.\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic sol
+.\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic respuesta
+
+Crear consumidor
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic sol
+.\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic respuesta
+
+-------------------------------------------------------------------------------------------------------------------------
+------------------------------COMANDOS DOCKER-----------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+Para importar una imagen de docker hub sitio web
+docker pull mysql:9.0
+
+Ubicamos el dockerfile y ejecutamos ponemos el nombre a la imagen
+docker build -t "imagen-app-docker" .
+docker run --name personas-springboot-docker -p 8084:8084 personas-docker:latest
+
+lista imagenes
+docker images
+
+borra la imagen
+docker rmi name_image
+
+Para listar contenedores
+docker ps -a
+docker rm personas-springboot-docker
+FORZADO BORRADO
+docker rm -f personas-springboot-docker
+
+ubicamos en la ruta de docker-compose.yml y ejecutamos
+docker compose up -d
+en win 7
+docker-compose up -d
+
+Para acceder al logs del contenedor
+docker logs employee
+
+Para acceder al terminal del contenedor
+docker exec -it 91cf841c441b bash
+exit

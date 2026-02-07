@@ -1,0 +1,109 @@
+  spring-api-image:
+    image: openjdk:17-jdk-slim
+    container_name: spring-api-cliente
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    networks:
+      - spring-network
+    restart: always
+    depends_on:
+      - my-mongo
+----------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+FROM openjdk:17-jdk-slim
+COPY "./target/crudPersonas-0.0.1-SNAPSHOT.jar" "app.jar"
+EXPOSE 8084
+ENTRYPOINT [ "java","-jar","app.jar" ]
+--------------------------------------------------------------------------------
+#IMAGEN MODELO
+FROM eclipse-temurin:21.0.3_9-jdk
+EXPOSE 8084
+#DEFINIR DIRECTORIO RAIZ DE NUESTRO CONTENEDOR
+WORKDIR /root
+#COPIAR Y PEGAR ARCHIVOS DENTRO DEL CONTENEDOR
+COPY ./pom.xml /root
+COPY ./.mvn /root/.mvn
+COPY ./mvnw /root
+#DESCARGAR DEPENDENCIAS
+RUN ./mvnw dependency:go-offline
+#COPIAR FUENTES AL CONTENEDOR
+COPY ./src /root/src
+#CONSTRUIR NUESTRA APP
+RUN ./mvnw clean install -DskipTests
+#LEVANTAR NUESTRA APP CUANDO EL CONTENEDOR INICIE
+ENTRYPOINT [ "java","-jar","/root/target/crudPersonas-0.0.1-SNAPSHOT.jar" ]
+´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´
+version: "3.9"
+services:
+
+  spring-api-image:
+    image: spring-api-image
+    container_name: spring-api-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - spring-network
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql
+    container_name: mysql_database
+    environment:
+      MYSQL_ROOT_PASSWORD: 1998
+      MYSQL_DATABASE: dockerDB
+      MYSQL_USER: sperezp
+      MYSQL_PASSWORD: 150919
+    ports:
+      - "3307:3306"
+    networks:
+      - spring-network
+    volumes:
+      - mysql-volume:/var/lib/mysql
+
+networks:
+  spring-network:
+volumes:
+  mysql-volume:
+-------------------------------------------------------------------------------------------
+version: "3"
+services:  
+  msclient:
+    build: .\ms-client
+    container_name: "msclient-dockercompose"
+    ports:
+      - 8080:8080
+    depends_on:
+      - mongodb
+    networks:
+      - amigoprogramador
+
+  msdebitcard:
+    build: .\ms-debitcard
+    container_name: "msdebitcard-dockercompose"
+    ports:
+      - 8081:8081
+    depends_on:
+      - mongodb
+      - msclient
+    networks:
+      - amigoprogramador
+      
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-dockercompose
+    ports:
+      - 27017:27017  
+    networks:
+      - amigoprogramador
+      
+networks:
+  amigoprogramador:
+  ---------------------------------------------------------------------
