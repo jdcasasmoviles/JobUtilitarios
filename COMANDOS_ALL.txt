@@ -141,21 +141,35 @@ Crear consumidor
 Para importar una imagen de docker hub sitio web
 docker pull mysql:9.0
 
-Ubicamos el dockerfile y ejecutamos ponemos el nombre a la imagen
-docker build -t "imagen-app-docker" .
-docker run --name personas-springboot-docker -p 8084:8084 personas-docker:latest
+Ubicamos el dockerfile y ejecutamos ponemos el nombre a la imagen.
+ Construir la imagen (el punto . indica la carpeta actual)
+docker build -t "mi-imagen" .
+
+ Ejecutar la imagen como contenedor
+ # -d: ejecutar en segundo plano (detached)
+# -p 8080:8080: mapear puerto 8080 del host al 8080 del contenedor
+# --name: nombre del contenedo
+docker run -d -p 8080:8084 --name mi-contenedor mi-imagen
+
+ Ejecutar la imagen como contenedor en primer plano
+docker run --name mi-contenedor -p 8084:8084 mi-imagen
 
 lista imagenes
 docker images
 
 borra la imagen
 docker rmi name_image
+forzar borrado imagen
+docker rmi -f name_image
 
 Para listar contenedores
 docker ps -a
-docker rm personas-springboot-docker
-FORZADO BORRADO
-docker rm -f personas-springboot-docker
+docker rm name_contenedor
+FORZADO BORRADO contenedor
+docker rm -f name_contenedor
+
+borra todos los contenedores
+for /f "tokens=*" %i in ('docker ps -aq') do docker rm -f %i
 --------------------------------------------------------------------------------
 ------------------------DOCKER COMPOSE---------------------------------------------
 -----------------------------------------------------------------------------
