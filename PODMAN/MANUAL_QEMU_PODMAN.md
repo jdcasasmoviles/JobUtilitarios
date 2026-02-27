@@ -351,6 +351,26 @@ java -jar kafka-ui.jar
 ------------------------------------------------------------------------------------------------
 podman exec -it kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic topic-jdc --from-beginning --max-messages 10
 
+# 1. Reconstruir la imagen de la app
+docker-compose build app
+
+
+# 2. Reiniciar solo el contenedor de la app (sin detener Kafka y demás)
+docker-compose up -d app
+# 3. Ver los logs para confirmar que funciona
+docker-compose logs -f app
+---------------------------------------------------------------------------------
+----------------------------------------------------------------------------
+-------------------------------------------------------------------
+##  Usando getty con autologin nativo (El más limpio)
+# Conéctate a tu VM (SSH o consola) .Edita el archivo /etc/inittab:
+sed -i 's/^tty1::respawn:\/sbin\/getty.*/tty1::respawn:-\/bin\/sh/' /etc/inittab && kill -HUP 1
+reinicia
+
+## Para que al iniciar sesión en Alpine aparezcas directamente en /root/spring-project
+nano /root/.profile
+cd /root/spring-project
+source /root/.profile
 
 
 

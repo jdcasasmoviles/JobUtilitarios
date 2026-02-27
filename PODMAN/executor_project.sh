@@ -169,6 +169,95 @@ run_compose() {
     fi
 }
 
+# Función para reconstruir solo la app con JAR actualizado
+rebuild_app() {
+    echo ""
+    echo "=========================================="
+    echo -e "${PURPLE}    RECONSTRUIR SOLO LA APLICACIÓN${NC}"
+    echo "=========================================="
+    
+    cd "$PROYECTO_DIR" || exit 1
+    
+    # Verificar que existe docker-compose.yml
+    if [ ! -f "docker-compose.yml" ]; then
+        print_error "No existe docker-compose.yml en $PROYECTO_DIR"
+        return 1
+    fi
+    
+    # Verificar que hay JARs actualizados
+    print_info "Verificando JARs disponibles en target/..."
+    JAR_COUNT=$(ls -1 target/*.jar 2>/dev/null | wc -l)
+    
+    if [ "$JAR_COUNT" -eq 0 ]; then
+        print_warning "No hay archivos .jar en target/"
+        print_info "Intentando descargar JARs actualizados..."
+        
+        # Re-descargar JARs usando la función existente
+        download_jars
+        
+        # Verificar nuevamente
+        JAR_COUNT=$(ls -1 target/*.jar 2>/dev/null | wc -l)
+        if [ "$JAR_COUNT" -eq 0 ]; then
+            print_error "No se pudo obtener ningún JAR"
+            return 1
+        fi
+    fi
+    
+    # Mostrar JARs encontrados
+    echo -e "${CYAN}JARs disponibles:${NC}"
+    ls -la target/*.jar 2>/dev/null | sed 's/^/   /'
+    
+    echo ""
+    print_info "Paso 1: Deteniendo contenedor app..."
+    podman-compose stop app
+    sleep 3
+    
+    print_info "Paso 2: Eliminando contenedor app antiguo..."
+    podman-compose rm -f app
+    sleep 3
+    
+    print_info "Paso 3: Reconstruyendo imagen de la app..."
+    podman-compose build app
+    
+    if [ $? -ne 0 ]; then
+        print_error "Error al reconstruir la imagen"
+        return 1
+    fi
+    
+    print_info "Paso 4: Levantando app actualizada..."
+    podman-compose up -d app
+    
+    if [ $? -eq 0 ]; then
+        print_success "✅ App reconstruida y desplegada correctamente"
+        
+        # Mostrar estado
+        echo ""
+        print_info "Estado de la app:"
+        podman-compose ps app
+        
+        # Esperar a que inicie y verificar
+        echo ""
+        print_info "Esperando segundos para verificar salud..."
+        sleep 7
+        
+        # Verificar logs recientes
+        echo ""
+        print_info "Últimos logs de la app:"
+        podman-compose logs --tail=20 app
+    else
+        print_error "Error al levantar la app"
+        return 1
+    fi
+}
+
+# Función para ver estado rápido
+quick_status() {
+    echo ""
+    print_info "ESTADO ACTUAL DE LOS CONTENEDORES:"
+    echo "----------------------------------------"
+    podman-compose ps
+}
+
 # Función para mostrar resumen
 show_summary() {
     echo ""
@@ -209,8 +298,7 @@ show_summary() {
     echo ""
 }
 
-# Función principal
-main() {
+run_completo() {
     clear
     echo "=============================================================="
     echo -e "${PURPLE}    SCRIPT AUTOMATIZADO - DEPLOY EN PODMAN${NC}"
@@ -251,12 +339,62 @@ main() {
     echo "=========================================="
 }
 
-# Ejecutar función principal
-main
+# Función para mostrar menú interactivo
+show_menu() {
+    clear
+    echo "=============================================================="
+    echo -e "${PURPLE}    MENÚ DE OPERACIONES - PROYECTO SPRING BOOT${NC}"
+    echo "=============================================================="
+    echo -e "${CYAN}Directorio actual:${NC} $PROYECTO_DIR"
+    echo -e "${CYAN}Última ejecución:${NC} $FECHA_INICIO"
+    echo ""
+    echo -e "${YELLOW}OPCIONES DISPONIBLES:${NC}"
+    echo ""
+    echo "1️⃣  🚀  DESPLEGAR COMPLETO (limpiar todo y desplegar desde cero)"
+    echo "2️⃣  🔨  RECONSTRUIR SOLO APP (rápido, con JAR actualizado)"
+    echo "3️⃣  📋  VER ESTADO DE CONTENEDORES"
+    echo "4️⃣  📊  ÚLTIMOS LOGS DE LA APP"
+    echo "5️⃣  🚪  SALIR"
+    echo ""
+    echo "=============================================================="
+}
 
-# Preguntar si quiere ver logs
-echo ""
-read -p "¿Quieres ver los logs en tiempo real? (s/n): " ver_logs
-if [ "$ver_logs" = "s" ] || [ "$ver_logs" = "S" ]; then
-    cd "$PROYECTO_DIR" && podman-compose logs -f
-fi
+main_with_menu() {
+    while true; do
+        show_menu
+        read -p "Selecciona una opción : " option
+        
+        case $option in
+            1)
+                echo ""
+                print_info "Ejecutando despliegue completo..."
+                run_completo  # Llamar a la función main original
+                ;;
+            2)
+                echo ""
+                rebuild_app
+                ;;
+            3)
+                quick_status
+                ;;
+            4)
+                echo ""
+                cd "$PROYECTO_DIR" && podman-compose logs --tail=10 app
+                ;;
+            5)
+                echo -e "${GREEN}¡Hasta luego!${NC}"
+                exit 0
+                ;;
+            *)
+                print_error "Opción no válida. Por favor selecciona 1-9"
+                sleep 2
+                ;;
+        esac
+        
+        echo ""
+        read -p "Presiona ENTER para continuar..." pause
+    done
+}
+
+# Ejecutar función principal
+main_with_menu
