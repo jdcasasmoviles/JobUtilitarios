@@ -171,6 +171,10 @@ run_compose() {
 
 # Función para reconstruir solo la app con JAR actualizado
 rebuild_app() {
+	clean_directories
+	download_compose
+	download_jars
+	
     echo ""
     echo "=========================================="
     echo -e "${PURPLE}    RECONSTRUIR SOLO LA APLICACIÓN${NC}"
@@ -178,11 +182,6 @@ rebuild_app() {
     
     cd "$PROYECTO_DIR" || exit 1
     
-    # Verificar que existe docker-compose.yml
-    if [ ! -f "docker-compose.yml" ]; then
-        print_error "No existe docker-compose.yml en $PROYECTO_DIR"
-        return 1
-    fi
     
     # Verificar que hay JARs actualizados
     print_info "Verificando JARs disponibles en target/..."
@@ -213,7 +212,7 @@ rebuild_app() {
     sleep 3
     
     print_info "Paso 2: Eliminando contenedor app antiguo..."
-    podman-compose rm -f app
+    podman rm -f app
     sleep 3
     
     print_info "Paso 3: Reconstruyendo imagen de la app..."
@@ -233,17 +232,17 @@ rebuild_app() {
         # Mostrar estado
         echo ""
         print_info "Estado de la app:"
-        podman-compose ps app
+        podman-compose ps
         
         # Esperar a que inicie y verificar
         echo ""
         print_info "Esperando segundos para verificar salud..."
-        sleep 7
+        sleep 10
         
         # Verificar logs recientes
         echo ""
         print_info "Últimos logs de la app:"
-        podman-compose logs --tail=20 app
+        podman-compose logs --tail=15 app
     else
         print_error "Error al levantar la app"
         return 1
@@ -269,32 +268,21 @@ show_summary() {
     echo -e "${CYAN}📚 JARs en target/:${NC} $(ls -1 $PROYECTO_DIR/target/*.jar 2>/dev/null | wc -l) archivo(s)"
     echo -e "${CYAN}🐳 Contenedores activos:${NC} $(podman ps -q | wc -l)"
     echo ""
-    echo ""
 	echo -e "${YELLOW}📋 COMANDOS ÚTILES PARA PODMAN Y PODMAN-COMPOSE:${NC}"
 	echo ""
 	echo -e "${CYAN}🔹 CONTENEDORES:${NC}"
 	echo "   Ver logs en tiempo real:              podman logs -f <nombre_contenedor>"
 	echo "   Ver todos los contenedores:           podman ps -a"
-	echo "   Detener un contenedor:                podman stop <nombre_contenedor>"
-	echo "   Eliminar contenedor forzosamente:      podman rm -f <nombre_contenedor>"
-	echo ""
-	echo -e "${CYAN}🔹 IMÁGENES:${NC}"
+	echo "   Eliminar contenedor forzosamente:     podman rm -f <nombre_contenedor>"
 	echo "   Ver todas las imágenes:               podman images -a"
-	echo "   Eliminar imagen forzosamente:          podman rmi -f <nombre_imagen>"
-	echo "   Limpiar imágenes no usadas:            podman image prune -f"
 	echo ""
 	echo -e "${CYAN}🔹 PODMAN-COMPOSE (trabajando con el stack):${NC}"
 	echo "   Levantar todos los servicios:         podman-compose up -d"
 	echo "   Detener todos los servicios:          podman-compose down"
 	echo "   Ver logs de un servicio específico:   podman-compose logs -f <servicio>"
-	echo "   Ver estado de los servicios:          podman-compose ps"
 	echo "   Reconstruir y levantar:               podman-compose up -d --build"
-	echo "   Detener y eliminar todo (contenedores, redes): podman-compose down"
-	echo ""
-	echo -e "${CYAN}🔹 INFORMACIÓN Y DIAGNÓSTICO:${NC}"
-	echo "   Ver puertos expuestos:                podman port <nombre_contenedor>"
+	echo "   Ver puertos expuestos:                podman port <id_contenedor>"
 	echo "   Ver IP de un contenedor:              podman inspect <nombre_contenedor> | grep IPAddress"
-	echo "   Ver healthcheck de un contenedor:     podman healthcheck <nombre_contenedor>"
     echo ""
 }
 
@@ -330,9 +318,6 @@ run_completo() {
     run_compose
     echo ""
     
-    # Paso 7: Mostrar resumen
-    show_summary
-    
     # Tiempo total
     FECHA_FIN=$(date +"%Y-%m-%d %H:%M:%S")
     echo -e "${BLUE}Tiempo total: $FECHA_INICIO - $FECHA_FIN${NC}"
@@ -350,12 +335,12 @@ show_menu() {
     echo ""
     echo -e "${YELLOW}OPCIONES DISPONIBLES:${NC}"
     echo ""
-    echo "1️⃣  🚀  DESPLEGAR COMPLETO (limpiar todo y desplegar desde cero)"
-    echo "2️⃣  🔨  RECONSTRUIR SOLO APP (rápido, con JAR actualizado)"
-    echo "3️⃣  📋  VER ESTADO DE CONTENEDORES"
-    echo "4️⃣  📊  ÚLTIMOS LOGS DE LA APP"
-    echo "5️⃣  🚪  SALIR"
-    echo ""
+    echo "	1	DESPLEGAR COMPLETO (limpiar todo y desplegar desde cero)"
+    echo "	2	RECONSTRUIR SOLO APP (rápido, con JAR actualizado)"
+    echo "	3	VER ESTADO DE CONTENEDORES"
+    echo "	4	ÚLTIMOS LOGS DE LA APP"
+    echo "	5	SALIR"
+    show_summary
     echo "=============================================================="
 }
 
