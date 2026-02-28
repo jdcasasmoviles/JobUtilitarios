@@ -3,12 +3,13 @@ title GESTOR DE VM - SERVIDOR HTTP - SSH INTEGRADO
 color 0A
 setlocal enabledelayedexpansion
 
-:: Variables globales para rutas (inicializadas con valores por defecto)
+:: Variables setear rutas de proyecto y qemu
 set PROYECTO=C:\Users\UsuarioPC\Documents\REPOSITORIO\topic-jdc-processor
 set QEMU_DIR=C:\Users\UsuarioPC\Documents\REPOSITORIO\Utilitarios\qemu_app
+:: Variables globales para rutas (inicializadas con valores por defecto)
 set DISCO_IMG=%QEMU_DIR%\alpine-podman.qcow2
 set VM_NAME=alpine-podman
-set RUN_QEMU="%QEMU_DIR%\qemu-system-x86_64.exe" -m 4096 -smp 4 -hda "%DISCO_IMG%" -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::8086-:8086,hostfwd=tcp::9092-:9092,hostfwd=tcp::8081-:8081 -device e1000,netdev=net0 -display none
+set RUN_QEMU=%QEMU_DIR%\qemu-system-x86_64.exe -m 4096 -smp 4 -hda %DISCO_IMG% -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::8086-:8086,hostfwd=tcp::9092-:9092,hostfwd=tcp::8081-:8081 -device e1000,netdev=net0 -display none
 
 :menu
 cls
@@ -47,7 +48,8 @@ goto menu
 
 :: Función para verificar si QEMU está corriendo
 :check_qemu
-tasklist /FI "IMAGENAME eq qemu-system-x86_64.exe" 2>NUL | find /I /N "qemu-system-x86_64.exe">NUL
+:: Obtener el resultado y guardarlo en variable
+tasklist /FI "IMAGENAME eq qemu-system-x86_64.exe" | find "qemu" > nul
 if "%ERRORLEVEL%"=="0" (
     set QEMU_RUNNING=1
 ) else (
@@ -80,17 +82,21 @@ echo   ✅ Servidor HTTP iniciado en background (http://localhost:8000)
 echo [2] Iniciando VM QEMU en background...
 call :check_qemu
 if %QEMU_RUNNING%==0 (
-    start "QEMU - Alpine VM" cmd /k "%RUN_QEMU%"
+    start /b %RUN_QEMU% > nul 2>&1
+    echo.
     set /a contador=0
-    for /l %%i in (1,1,45) do (
+    for /l %%i in (1,1,46) do (
         set /a contador+=1
         set /p=">" < nul
         timeout /t 1 /nobreak > nul
     )
-    
-    echo.
-    echo.
-    echo   ✅ VM iniciado
+    call :check_qemu
+    if !QEMU_RUNNING!==1 (
+		echo   ✅ VM OK - Conectando SSH...
+		call :conectar_ssh
+	) else (
+		echo   ⏳ VM iniciando, espera unos segundos más...
+	)
 ) else (
     echo   ⚠ VM ya estaba en ejecución
 )
