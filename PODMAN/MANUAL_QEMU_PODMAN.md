@@ -396,7 +396,6 @@ start() {
                 /usr/bin/podman healthcheck run kafka 2>&1 | logger -t podman-health
                 /usr/bin/podman healthcheck run schema-registry 2>&1 | logger -t podman-health
                 /usr/bin/podman healthcheck run kafbat-ui 2>&1 | logger -t podman-health
-                /usr/bin/podman healthcheck run localhost-proxy 2>&1 | logger -t podman-health
                 # Esperar segundos antes del siguiente ciclo
                 sleep 8
             done
