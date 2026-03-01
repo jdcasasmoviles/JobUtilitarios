@@ -326,6 +326,7 @@ podman rmi -f -a
 cd /root/spring-project && chmod +x executor_project.sh && ./executor_project.sh
 chmod +x executor_clean.sh && ./executor_clean.sh
 
+chmod +x monitor-alpine.sh && ./monitor-alpine.sh
 ## Limpiar volumnes y contenedores
 # Detener servicios
 podman-compose down
@@ -372,6 +373,50 @@ nano /root/.profile
 cd /root/spring-project
 source /root/.profile
 
+-------------------------------------------------------------
+nano /etc/init.d/podman-health
+
+#!/sbin/openrc-run
+
+name="podman-health"
+description="Daemon para ejecutar healthchecks de Podman en Alpine"
+
+depend() {
+    need net
+    after podman
+}
+
+start() {
+    ebegin "Iniciando ${name}"
+    start-stop-daemon --start --background --make-pidfile --pidfile /run/${name}.pid \
+        --exec /bin/sh -- -c "
+            while true; do
+                # Ejecutar healthcheck para los contenedores que nos interesen
+                /usr/bin/podman healthcheck run zookeeper 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run kafka 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run schema-registry 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run kafbat-ui 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run localhost-proxy 2>&1 | logger -t podman-health
+                # Esperar segundos antes del siguiente ciclo
+                sleep 8
+            done
+        "
+    eend $?
+}
+
+stop() {
+    ebegin "Deteniendo ${name}"
+    start-stop-daemon --stop --pidfile /run/${name}.pid
+    eend $?
+}
+---------------------------------------------------------------------------------------------------
+# Haz el script ejecutable:
+chmod +x /etc/init.d/podman-health && rc-service podman-health stop
+# Iniciar el servicio ahora
+# Añadirlo al runlevel por defecto para que inicie con el sistema
+rc-service podman-health start && rc-update add podman-health && rc-service podman-health status
+# Verifica que el servicio esté corriendo:
+ps aux | grep podman-health
 
 
 
