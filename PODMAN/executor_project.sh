@@ -171,17 +171,16 @@ run_compose() {
 
 # Función para reconstruir solo la app con JAR actualizado
 rebuild_app() {
-	clean_directories
-	download_compose
-	download_jars
-	
+    clean_directories
+    download_compose
+    download_jars
+    
     echo ""
     echo "=========================================="
-    echo -e "${PURPLE}    RECONSTRUIR SOLO LA APLICACIÓN${NC}"
+    echo -e "${PURPLE}    RECONSTRUIR SOLO LA APLICACIÓN (SIN CACHE)${NC}"
     echo "=========================================="
     
     cd "$PROYECTO_DIR" || exit 1
-    
     
     # Verificar que hay JARs actualizados
     print_info "Verificando JARs disponibles en target/..."
@@ -190,11 +189,7 @@ rebuild_app() {
     if [ "$JAR_COUNT" -eq 0 ]; then
         print_warning "No hay archivos .jar en target/"
         print_info "Intentando descargar JARs actualizados..."
-        
-        # Re-descargar JARs usando la función existente
         download_jars
-        
-        # Verificar nuevamente
         JAR_COUNT=$(ls -1 target/*.jar 2>/dev/null | wc -l)
         if [ "$JAR_COUNT" -eq 0 ]; then
             print_error "No se pudo obtener ningún JAR"
@@ -202,21 +197,27 @@ rebuild_app() {
         fi
     fi
     
-    # Mostrar JARs encontrados
-    echo -e "${CYAN}JARs disponibles:${NC}"
+    # Mostrar JARs encontrados con fecha de modificación
+    echo -e "${CYAN}JARs disponibles (verificar fecha):${NC}"
     ls -la target/*.jar 2>/dev/null | sed 's/^/   /'
     
     echo ""
-    print_info "Paso 1: Deteniendo contenedor app..."
-    podman-compose stop app
-    sleep 3
+    print_info "Paso 1: Deteniendo y eliminando contenedor app..."
+    podman-compose down app 2>/dev/null
+    podman rm -f app 2>/dev/null
+    sleep 2
     
-    print_info "Paso 2: Eliminando contenedor app antiguo..."
-    podman rm -f app
-    sleep 3
+    print_info "Paso 2: Eliminando imagen antigua de la app..."
+    # Buscar y eliminar la imagen específica de la app
+    APP_IMAGE=$(podman images | grep -i "app" | awk '{print $3}')
+    if [ ! -z "$APP_IMAGE" ]; then
+        podman rmi -f $APP_IMAGE 2>/dev/null
+        print_success "Imagen antigua eliminada"
+    fi
     
-    print_info "Paso 3: Reconstruyendo imagen de la app..."
-    podman-compose build app
+    print_info "Paso 3: Reconstruyendo imagen de la app SIN CACHE..."
+    # Forzar rebuild sin cache
+    podman-compose build --no-cache app
     
     if [ $? -ne 0 ]; then
         print_error "Error al reconstruir la imagen"
@@ -229,20 +230,16 @@ rebuild_app() {
     if [ $? -eq 0 ]; then
         print_success "✅ App reconstruida y desplegada correctamente"
         
-        # Mostrar estado
+        # Verificar que el JAR nuevo esté en el contenedor
         echo ""
-        print_info "Estado de la app:"
-        podman-compose ps
+        print_info "Verificando JAR dentro del contenedor:"
+        sleep 5
+        podman exec app ls -la /app/ 2>/dev/null || echo "   No se pudo verificar (el contenedor puede estar iniciando)"
         
-        # Esperar a que inicie y verificar
-        echo ""
-        print_info "Esperando segundos para verificar salud..."
-        sleep 10
-        
-        # Verificar logs recientes
+        # Mostrar logs recientes
         echo ""
         print_info "Últimos logs de la app:"
-        podman-compose logs --tail=15 app
+        podman-compose logs --tail=20 app
     else
         print_error "Error al levantar la app"
         return 1

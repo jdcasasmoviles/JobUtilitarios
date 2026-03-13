@@ -25,9 +25,9 @@ echo   - Disco: %DISCO_IMG%
 echo.
 echo =====================================================================
 echo.
-echo [1] 🚀 INICIAR TODO (HTTP + VM + SSH)
-echo [2] 🔌 CONECTAR SSH A VM
-echo [3] 🚪 SALIR
+echo  1 INICIAR TODO (HTTP + VM + SSH)
+echo  2 CONECTAR SSH A VM
+echo  3 SALIR
 
 echo.
 echo =====================================================================
@@ -60,7 +60,7 @@ exit /b
 :iniciar_todo
 cls
 echo ================================================
-echo    🚀 INICIANDO TODO (HTTP + VM + SSH)
+echo    INICIANDO TODO (HTTP + VM + SSH)
 echo ================================================
 echo.
 
@@ -72,14 +72,14 @@ if "%PROYECTO%"=="" (
 )
 
 :: Paso 1: Iniciar servidor HTTP
-echo [1] Iniciando servidor HTTP en el puerto 8000...
+echo  1 Iniciando servidor HTTP en el puerto 8000...
 echo Proyecto: %PROYECTO%
 cd /d "%PROYECTO%"
 start /b python -m http.server 8000 > nul 2>&1
-echo   ✅ Servidor HTTP iniciado en background (http://localhost:8000)
+echo   Servidor HTTP iniciado en background (http://localhost:8000)
 
 :: Paso 2: Iniciar VM QEMU
-echo [2] Iniciando VM QEMU en background...
+echo  2 Iniciando VM QEMU en background...
 call :check_qemu
 if %QEMU_RUNNING%==0 (
     start /b %RUN_QEMU% > nul 2>&1
@@ -92,17 +92,17 @@ if %QEMU_RUNNING%==0 (
     )
     call :check_qemu
     if !QEMU_RUNNING!==1 (
-		echo   ✅ VM OK - Conectando SSH...
+		echo   VM OK - Conectando SSH...
 		call :conectar_ssh
 	) else (
-		echo   ⏳ VM iniciando, espera unos segundos más...
+		echo   VM iniciando, espera unos segundos más...
 	)
 ) else (
-    echo   ⚠ VM ya estaba en ejecución
+    echo   VM ya estaba en ejecución
 )
 
 echo ================================================
-echo    🎯 TODO INICIADO CORRECTAMENTE
+echo    TODO INICIADO CORRECTAMENTE
 echo ================================================
 pause
 goto menu
@@ -110,7 +110,7 @@ goto menu
 :conectar_ssh
 cls
 echo ================================================
-echo    🔌 CONECTANDO SSH A VM
+echo    CONECTANDO SSH A VM
 echo ================================================
 echo.
 
@@ -131,7 +131,7 @@ goto menu
 :salir
 cls
 echo ================================================
-echo    🚪 LIMPIANDO Y SALIENDO
+echo    LIMPIANDO Y SALIENDO
 echo ================================================
 echo.
 echo Deteniendo servicios...
@@ -141,7 +141,7 @@ for /f "tokens=5 delims= " %%a in ('netstat -ano ^| findstr :8000 ^| findstr LIS
 )
 :: Detener QEMU
 taskkill /F /IM qemu-system-x86_64.exe 2>nul
-echo ✅ Servicios detenidos
+echo Servicios detenidos
 echo.
 echo Saliendo del gestor...
 timeout /t 2 /nobreak > nul
