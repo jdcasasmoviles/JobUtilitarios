@@ -32,16 +32,20 @@ setup-alpine
 # Presiona Enter para aceptar el valor por defecto (entre corchetes []) cuando no estés seguro.
 
 Select keyboard layout: Elige tu distribución de teclado. Lo más común es escribir us o es y presionar Enter.
-Enter system hostname: Ponle un nombre a tu máquina virtual, por ejemplo: alpine-podman.
-Which one do you want to initialize? (or '?' for list): Simplemente presiona Enter para inicializar todas las interfaces de red.
+Enter system hostname: Ponle un nombre a tu máquina virtual, por ejemplo: desktop-alpine.
+Which one do you want to initialize? (or '?' for list): eth0 (selecciona la interfaz de red).
 Ip address for eth0? (or 'dhcp'): Escribe dhcp y presiona Enter para que obtenga una IP automáticamente.
-Do you want to do any manual network configuration?: Escribe no.
+Do you want to do any manual network configuration?: Escribe n.
 New password: Establece una contraseña para el usuario root. Escríbela dos veces.
-Which timezone are you in?: Especifica tu zona horaria, por ejemplo: America/Santiago o Europe/Madrid.
+Which timezone are you in?: Especifica tu zona horaria, por ejemplo: America/Lima.
 Which HTTP proxy (URL) you want to use?: Déjalo en blanco y presiona Enter.
 Which NTP client to run?: Elige chrony (o el que venga por defecto).
 Enter mirror number (1-xx) or URL to fetch: Elige un número de servidor mirror cercano a tu ubicación para descargas rápidas (por ejemplo, el de tu país).
+Escribe 1 y enter
+Setup a user? no (no creamos un usuario normal, solo usaremos root para simplificar)
 Which SSH server? ('openssh') Elige openssh.
+Allow root ssh login?	prohibit-password (solo por clave SSH)
+Enter ssh key or URL for root?	none
 Which disk(s) you would like to use?: Escribe sda (que es el nombre de tu disco duro virtual) y presiona Enter.
 How would you like to use it?: Elige sys (para una instalación completa en el disco).
 WARNING: Erase the above disk(s) and continue?: Confirma escribiendo y.
@@ -71,6 +75,9 @@ rc-update add sshd default
  Normalmente será algo como 10.0.2.15, pero como usaremos el reenvío de puertos, nos conectaremos a localhost.
 # reiniciar la MV
 reboot
+# Conectamos por ssh ,desde un cmd de windows
+ssh-keygen -R [localhost]:2222
+ssh -o StrictHostKeyChecking=no -p 2222 root@localhost
 
 # ======= FASE 4: Instalación de Podman y dependencias============================================================================
 # Habilitar repositorio community
@@ -78,75 +85,30 @@ nano /etc/apk/repositories
 Descomenta la línea que termina en community (quita el #). Guarda y sal.
 # Instalar paquetes necesarios
 apk update
-apk add podman podman-compose iptables iptables-openrc netavark aardvark-dns cni-plugins
-# Configurar iptables y red
-# Habilitar forwarding
-echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-sysctl -w net.ipv4.ip_forward=1
-# Configurar iptables
-rc-update add iptables default
-rc-service iptables start
-iptables -P FORWARD ACCEPT
-iptables -t nat -F
-iptables -F
-rc-service iptables save
-# Configurar Podman para usar netavark
-mkdir -p /etc/containers
-cat > /etc/containers/containers.conf << EOF
-[network]
-network_backend = "netavark"
-EOF
-# Crear enlaces para netavark
-bash
-ln -s /usr/libexec/podman/netavark /usr/local/bin/netavark
-ln -s /usr/libexec/podman/aardvark-dns /usr/local/bin/aardvark-dns
-# Iniciar el servicio de Podman
-mkdir -p /run/podman
-pkill podman
-rm -f /run/podman/podman.sock
-podman system service --time=0 unix:///run/podman/podman.sock &
-# Probar Podman y crear primer docker-compose.yml
-Verificar instalación
-podman version
-podman info | grep -A5 network
-netavark --version
+# Instalar Podman (este comando instalará crun, conmon, etc.)
+apk add podman
 
-# ======= FASE 5: Instalacion de compose ============================================================================
-# Instalación de Podman y Herramientas de Compose
-# Conectamos por ssh ,desde un cmd de windows
-ssh -p 2222 root@localhost
-# Podman necesita el servicio cgroups para funcionar correctamente 
-# Añadir cgroups al arranque
-rc-update add cgroups default
-# Iniciar el servicio ahora
+# Configurar y arrancar el servicio de cgroups v2 (esencial para Podman)
+rc-update add cgroups boot
 rc-service cgroups start
-# Verificar la instalación
-podman --version
+
+# (Opcional) Eliminar el mensaje de advertencia de Docker
+touch /etc/containers/nodocker
+
+# 6. ¡Verificar la instalación!
 podman info
-# Verificar que estás conectado a internet
-ping -c 4 github.com
-# Instalar curl (si no lo tienes)
-apk add curl
-# Crear el directorio si no existe
-mkdir -p /usr/local/bin
-# Descargar la última versión estable de docker-compose
-# (Nota: usa v2.24.5 que es una versión estable reciente)
-curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
-# Dar permisos de ejecución
-chmod +x /usr/local/bin/docker-compose
-# Verificar la versión instalada
-docker-compose --version
+podman --version
+# ======= FASE 5: Instalacion de compose ============================================================================
 # Instalar podman-compose
 apk add podman-compose
-# Activar el módulo de iptables en el kernel
-modprobe iptables
-modprobe ip6tables
-
-
+# Verificar la versión instalada
+podman-compose --version
 # ======= FASE 6: Probando podman ============================================================================
+# arrancar la maquina virtual
+qemu-system-x86_64 -m 2048 -smp 2 -hda alpine-disk.qcow2 -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080 -device e1000,netdev=net0
 # Crear proyecto de prueba
-mkdir ~/test-compose
-cd ~/test-compose
+mkdir ~/proyectos
+cd ~/proyectos
 # Crear docker-compose.yml
 cat > docker-compose.yml << EOF
 services:
@@ -159,94 +121,84 @@ EOF
 podman-compose up -d
 # Verificar dentro de la VM
 podman ps
-curl localhost:8080
+wget -O- localhost:8080
 # Deberías ver el HTML de bienvenida de nginx.
 Acceso desde Windows.Desde el navegador en Windows.
 Abre cualquier navegador y ve a:
 http://localhost:8080
 # DEBERÍAS VER "Welcome to nginx!"
+# Borramos los archivos de prueba (forzado)
+podman rm -f -a && podman rmi -f -a
+rm -rf docker-compose.yml
 
-# ======= FASE 7: Comandos utiles ============================================================================
-# En Windows (para iniciar la VM):
-cd C:\QEMU
-qemu-system-x86_64 -m 2048 -smp 2 -hda alpine-podman.qcow2 -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8084-:8084 -device e1000,netdev=net0
-# Para conectar por SSH:
-ssh -p 2222 root@localhost
-# Dentro de la VM (gestión de contenedores):
-podman-compose up -d        # Levantar servicios
-podman-compose down         # Detener servicios
-podman-compose ps           # Ver estado
-podman-compose logs         # Ver logs
-podman ps                   # Ver contenedores
-podman images               # Ver imágenes
-# Posibles errores y soluciones rápidas
-Error	                                                Solución
-cannot connect to localhost:8080	                    Verificar que QEMU se inició con hostfwd=tcp::8080-:8080
-network not found	                                    Ejecutar podman network create test-compose_default
-iptables: No such file or directory	                  Instalar iptables: apk add iptables iptables-openrc
-cni support is not enabled	                          Configurar netavark en /etc/containers/containers.conf
-bind: no such file or directory	                      Crear directorio: mkdir -p /run/podman
+# ======= FASE 7: Configurar para que cargue un path por defecto ============================================================================
+##  Usando getty con autologin nativo (El más limpio)
+# Conéctate a tu VM (SSH o consola) .Edita el archivo /etc/inittab:
+sed -i 's/^tty1::respawn:\/sbin\/getty.*/tty1::respawn:-\/bin\/sh/' /etc/inittab
+# Configurar directorio por defecto
+cat >> ~/.profile << 'EOF'
+if [ -d ~/proyectos ]; then
+    cd ~/proyectos
+fi
+EOF
 
-# ======= FASE 8: CONCLUSIÓN ==============================================================================================
-Has construido un sistema completo de contenedores portable, sin necesidad de privilegios de administrador, y completamente funcional en Windows.
-¡Felicidades! Este conocimiento te permite ahora:
-Desarrollar con contenedores en cualquier PC Windows
-Usar docker-compose.yml sin modificar nada
-Tener un entorno reproducible y portable (puedes copiar la carpeta QEMU y el disco .qcow2 a un USB y llevarlo a cualquier PC
+# Asegurar que .profile se carga en SSH
+echo "source ~/.profile" >> ~/.profile
 
+# Aplicar cambios
+kill -HUP 1
+reboot
 
-#  =======DIAGNOSTICO ==============================================================================================
-## Inicia servicios manualmente
-podman start kafka
-podman logs -f kafka
+# ======= FASE 8: Verificador de podman-health  ============================================================================
+nano /etc/init.d/podman-health
 
-podman start schema-registry
-podman logs -f schema-registry
+#!/sbin/openrc-run
 
-podman start topic-jdc-processor
-podman logs -f topic-jdc-processor
+name="podman-health"
+description="Daemon para ejecutar healthchecks de Podman en Alpine"
 
-podman logs -f zookeeper
-podman logs app
+depend() {
+    need net
+    after podman
+}
 
-------------------------------------------------------------------------------------
-# Ver logs de Zookeeper (debería estar completamente iniciado)
-podman logs zookeeper --tail 20
+start() {
+    ebegin "Iniciando ${name}"
+    start-stop-daemon --start --background --make-pidfile --pidfile /run/${name}.pid \
+        --exec /bin/sh -- -c "
+            while true; do
+                # Ejecutar healthcheck para los contenedores que nos interesen
+                /usr/bin/podman healthcheck run zookeeper 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run kafka 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run schema-registry 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run kafbat-ui 2>&1 | logger -t podman-health
+                /usr/bin/podman healthcheck run app 2>&1 | logger -t podman-health
+                # Esperar segundos antes del siguiente ciclo
+                sleep 8
+            done
+        "
+    eend $?
+}
 
-# Ver logs de Kafka (el más importante)
-podman logs kafka --tail 30
+stop() {
+    ebegin "Deteniendo ${name}"
+    start-stop-daemon --stop --pidfile /run/${name}.pid
+    eend $?
+}
+---------------------------------------------------------------------------------------------------
+# Haz el script ejecutable:
+chmod +x /etc/init.d/podman-health && rc-service podman-health stop
+# Iniciar el servicio ahora
+# Añadirlo al runlevel por defecto para que inicie con el sistema
+rc-service podman-health start && rc-update add podman-health && rc-service podman-health status
+# Verifica que el servicio esté corriendo:
+ps aux | grep podman-health
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+qemu-system-x86_64.exe -m 4096 -smp 4 -hda alpine-disk.qcow2 -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::8086-:8086,hostfwd=tcp::9092-:9092,hostfwd=tcp::8081-:8081 -device e1000,netdev=net0
 
-# Ver logs de Schema Registry
-podman logs schema-registry --tail 20
+rm -rf /root/proyectos/executor_project.sh && cd /root/proyectos && wget http://10.0.2.2:8000/executor_project.sh
+cd /root/proyectos && chmod +x executor_project.sh && ./executor_project.sh
 
-# Ver logs de tu app
-podman logs topic-jdc-processor --tail 20
----------------------------------------------------------------------------------------
-# Ver logs completos de kafka
-podman logs kafka --tail 50
-# erificar que kafka está realmente funcionando
-podman exec kafka kafka-topics --bootstrap-server localhost:9092 --list
-# Ver el estado actual de todos los contenedores
-podman ps -a
-
-## Verificar conectividad entre servicios:
-# Desde kafka, probar conexión a zookeeper
-podman exec kafka nc -zv zookeeper 2181
-# Probar que kafka puede crear un tópico
-podman exec kafka kafka-topics --bootstrap-server localhost:9092 --create --topic test-topic --partitions 1 --replication-factor 1
-# Listar tópicos
-podman exec kafka kafka-topics --bootstrap-server localhost:9092 --list
-
-## Prueba rapida de servicios OK
-# Probar Kafka (listar tópicos)
-podman exec kafka kafka-topics --bootstrap-server localhost:9092 --list
-# Probar Schema Registry
-curl http://localhost:8081/subjects
-# Probar tu API
-curl http://localhost:8080/api/v1/task
-
-
------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------------
@@ -258,41 +210,20 @@ C:\Users\UsuarioPC\Documents\REPOSITORIO\api-tipocambio-moneda
 python -m http.server 8000
 # conectar mediante ssh
 ssh -p 2222 root@localhost
-# Eliminar todos los contenedores (forzado)
-podman rm -f -a && podman rmi -f -a
 
-# Elimina contenedores 
-for /f %i in ('docker ps -aq') do docker rm -f %i
-# Elimina imagenes
-for /f %i in ('docker images -q') do docker rmi -f %i
+
 # Elimina los directorios
 rm -rf /root/spring-project/* && mkdir -p /root/spring-project/target
 # Descargar archivos a VM
 rm -rf /root/spring-project/executor_project.sh && cd /root/spring-project && wget http://10.0.2.2:8000/executor_project.sh
 cd /root/spring-project && wget http://10.0.2.2:8000/docker-compose.yml
-cd /root/spring-project && wget http://10.0.2.2:8000/executor_clean.sh
 cd /root/spring-project && wget http://10.0.2.2:8000/Dockerfile
-cd /root/spring-project && wget http://10.0.2.2:8000/target/quarkus-app/quarkus-run.jar
-cd /root/spring-project/target/quarkus-app && wget http://10.0.2.2:8000/target/quarkus-app/quarkus-run.jar
+
 ## Ejecutando podman con Dockerfile
 podman build -t mi-app .
 podman run -d -p 8084:8084 --name mi-app-container mi-app
 podman logs -f mi-app-container
-## Ejecutando docker con Dockerfile
-docker build -t mi-app .
-docker run -d -p 8084:8084 --name mi-app-container mi-app
-docker logs -f mi-app-container
-##  Entrar al contenedor
-# Ejecuta un shell interactivo en el contenedor (aunque haya fallado)
-podman run -it --entrypoint /bin/sh mi-app
-# Ver el directorio actual
-pwd
-# Listar archivos
-ls -la
-# Ver si existe quarkus-run.jar
-find / -name "quarkus-run.jar" 2>/dev/null
-# Salir del contenedor
-exit
+
 
 # Descargar el JAR con SNAPSHOT en el nombre.Primero, obtén la lista de archivos en target
 wget -q -O- http://10.0.2.2:8000/target/ | grep -o 'href="[^"]*SNAPSHOT[^"]*\.jar"' | sed 's/href="//;s/"//' | while read jarfile; do
@@ -323,10 +254,8 @@ podman rm -f -a
 # IMPORTANTE: Solo para liberar espacio en disco
 # Ejecuta script para eliminar imagenes
 podman rmi -f -a
-cd /root/spring-project && chmod +x executor_project.sh && ./executor_project.sh
-chmod +x executor_clean.sh && ./executor_clean.sh
 
-chmod +x monitor-alpine.sh && ./monitor-alpine.sh
+
 ## Limpiar volumnes y contenedores
 # Detener servicios
 podman-compose down
@@ -363,59 +292,10 @@ docker-compose logs -f app
 ---------------------------------------------------------------------------------
 ----------------------------------------------------------------------------
 -------------------------------------------------------------------
-##  Usando getty con autologin nativo (El más limpio)
-# Conéctate a tu VM (SSH o consola) .Edita el archivo /etc/inittab:
-sed -i 's/^tty1::respawn:\/sbin\/getty.*/tty1::respawn:-\/bin\/sh/' /etc/inittab && kill -HUP 1
-reinicia
 
-## Para que al iniciar sesión en Alpine aparezcas directamente en /root/spring-project
-nano /root/.profile
-cd /root/spring-project
-source /root/.profile
 
 -------------------------------------------------------------
-nano /etc/init.d/podman-health
 
-#!/sbin/openrc-run
-
-name="podman-health"
-description="Daemon para ejecutar healthchecks de Podman en Alpine"
-
-depend() {
-    need net
-    after podman
-}
-
-start() {
-    ebegin "Iniciando ${name}"
-    start-stop-daemon --start --background --make-pidfile --pidfile /run/${name}.pid \
-        --exec /bin/sh -- -c "
-            while true; do
-                # Ejecutar healthcheck para los contenedores que nos interesen
-                /usr/bin/podman healthcheck run zookeeper 2>&1 | logger -t podman-health
-                /usr/bin/podman healthcheck run kafka 2>&1 | logger -t podman-health
-                /usr/bin/podman healthcheck run schema-registry 2>&1 | logger -t podman-health
-                /usr/bin/podman healthcheck run kafbat-ui 2>&1 | logger -t podman-health
-                # Esperar segundos antes del siguiente ciclo
-                sleep 8
-            done
-        "
-    eend $?
-}
-
-stop() {
-    ebegin "Deteniendo ${name}"
-    start-stop-daemon --stop --pidfile /run/${name}.pid
-    eend $?
-}
----------------------------------------------------------------------------------------------------
-# Haz el script ejecutable:
-chmod +x /etc/init.d/podman-health && rc-service podman-health stop
-# Iniciar el servicio ahora
-# Añadirlo al runlevel por defecto para que inicie con el sistema
-rc-service podman-health start && rc-update add podman-health && rc-service podman-health status
-# Verifica que el servicio esté corriendo:
-ps aux | grep podman-health
 
 
 

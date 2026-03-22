@@ -4,11 +4,10 @@ color 0A
 setlocal enabledelayedexpansion
 
 :: Variables setear rutas de proyecto y qemu
-set PROYECTO=C:\Users\UsuarioPC\Documents\REPOSITORIO\topic-jdc-processor
+set PROYECTO=C:\Users\UsuarioPC\Documents\REPOSITORIO\tarea-processor
 set QEMU_DIR=C:\Users\UsuarioPC\Documents\REPOSITORIO\Utilitarios\qemu_app
 :: Variables globales para rutas (inicializadas con valores por defecto)
-set DISCO_IMG=%QEMU_DIR%\alpine-podman.qcow2
-set VM_NAME=alpine-podman
+set DISCO_IMG=%QEMU_DIR%\alpine-disk.qcow2
 set RUN_QEMU=%QEMU_DIR%\qemu-system-x86_64.exe -m 4096 -smp 4 -hda %DISCO_IMG% -vga std -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::8086-:8086,hostfwd=tcp::9092-:9092,hostfwd=tcp::8081-:8081 -device e1000,netdev=net0 -display none
 
 :menu

@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuración
 URL_BASE="http://10.0.2.2:8000"
-PROYECTO_DIR="/root/spring-project"
+PROYECTO_DIR="/root/proyectos"
 FECHA_INICIO=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Función para mostrar mensajes
@@ -55,8 +55,8 @@ check_http_server() {
 
 # Función para limpiar contenedores
 clean_containers() {
-    print_info "Limpiando contenedores existentes..."
-    
+    print_info "Limpiando pods y contenedores..."
+    podman pod rm -f -a 2>/dev/null   
     # Verificar si hay contenedores antes de eliminar
     CONTADOR=$(podman ps -aq | wc -l)
     if [ "$CONTADOR" -gt 0 ]; then
@@ -73,7 +73,9 @@ clean_directories() {
     print_info "Limpiando directorio del proyecto..."
     
     if [ -d "$PROYECTO_DIR" ]; then
-        rm -rf rm -f /root/spring-project/Dockerfile && rm -rf rm -f /root/spring-project/docker-compose.yml && rm -rf /root/spring-project/target
+        rm -f "$PROYECTO_DIR/Dockerfile" 2>/dev/null
+        rm -f "$PROYECTO_DIR/docker-compose.yml" 2>/dev/null
+        rm -rf "$PROYECTO_DIR/target" 2>/dev/null
         print_success "Contenido de $PROYECTO_DIR eliminado"
     else
         print_info "Creando directorio $PROYECTO_DIR"
@@ -154,14 +156,16 @@ run_compose() {
         # Mostrar información de puertos
         echo ""
         print_info "Puertos expuestos:"
-        podman ps --format "table {{.Names}}\t{{.Ports}}" | grep -v "NAMES"
+        podman ps --format "table {{.Names}}\t{{.Ports}}" 2>/dev/null | grep -v "NAMES"
         
         # Probar conectividad local
         sleep 2
-        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8084/ | grep -q "200\|405"; then
-            print_success "API respondiendo localmente en VM"
-        else
-            print_warning "La API aún no responde, puede estar iniciando..."
+        if command -v curl >/dev/null 2>&1; then
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8084/ 2>/dev/null | grep -q "200\|405"; then
+                print_success "API respondiendo localmente en VM"
+            else
+                print_warning "La API aún no responde, puede estar iniciando..."
+            fi
         fi
     else
         print_error "Error al iniciar contenedores"
@@ -171,10 +175,10 @@ run_compose() {
 
 # Función para reconstruir solo la app con JAR actualizado
 rebuild_app() {
+	# Descargar archivos actualizados
     clean_directories
     download_compose
     download_jars
-    
     echo ""
     echo "=========================================="
     echo -e "${PURPLE}    RECONSTRUIR SOLO LA APLICACIÓN (SIN CACHE)${NC}"
@@ -209,9 +213,9 @@ rebuild_app() {
     
     print_info "Paso 2: Eliminando imagen antigua de la app..."
     # Buscar y eliminar la imagen específica de la app
-    APP_IMAGE=$(podman images | grep -i "app" | awk '{print $3}')
-    if [ ! -z "$APP_IMAGE" ]; then
-        podman rmi -f $APP_IMAGE 2>/dev/null
+    APP_IMAGE=$(podman images 2>/dev/null | grep -i "app" | awk '{print $3}' | head -1)
+    if [ -n "$APP_IMAGE" ]; then
+        podman rmi -f "$APP_IMAGE" 2>/dev/null
         print_success "Imagen antigua eliminada"
     fi
     
@@ -244,6 +248,7 @@ rebuild_app() {
         print_error "Error al levantar la app"
         return 1
     fi
+    show_summary
 }
 
 # Función para ver estado rápido
@@ -251,7 +256,7 @@ quick_status() {
     echo ""
     print_info "ESTADO ACTUAL DE LOS CONTENEDORES:"
     echo "----------------------------------------"
-    podman-compose ps
+    podman-compose ps 2>/dev/null || echo "No hay contenedores activos"
 }
 
 # Función para mostrar resumen
@@ -263,23 +268,27 @@ show_summary() {
     echo -e "${CYAN}📁 Proyecto:${NC} $PROYECTO_DIR"
     echo -e "${CYAN}📦 docker-compose:${NC} $( [ -f $PROYECTO_DIR/docker-compose.yml ] && echo '✅' || echo '❌' )"
     echo -e "${CYAN}📚 JARs en target/:${NC} $(ls -1 $PROYECTO_DIR/target/*.jar 2>/dev/null | wc -l) archivo(s)"
-    echo -e "${CYAN}🐳 Contenedores activos:${NC} $(podman ps -q | wc -l)"
+    echo -e "${CYAN}🐳 Contenedores activos:${NC} $(podman ps -q 2>/dev/null | wc -l)"
     echo ""
-	echo -e "${YELLOW}📋 COMANDOS ÚTILES PARA PODMAN Y PODMAN-COMPOSE:${NC}"
-	echo ""
-	echo -e "${CYAN}🔹 CONTENEDORES:${NC}"
-	echo "   Ver logs en tiempo real:              podman logs -f <nombre_contenedor>"
-	echo "   Ver todos los contenedores:           podman ps -a"
-	echo "   Eliminar contenedor forzosamente:     podman rm -f <nombre_contenedor>"
-	echo "   Ver todas las imágenes:               podman images -a"
-	echo ""
-	echo -e "${CYAN}🔹 PODMAN-COMPOSE (trabajando con el stack):${NC}"
-	echo "   Levantar todos los servicios:         podman-compose up -d"
-	echo "   Detener todos los servicios:          podman-compose down"
-	echo "   Ver logs de un servicio específico:   podman-compose logs -f <servicio>"
-	echo "   Reconstruir y levantar:               podman-compose up -d --build"
-	echo "   Ver puertos expuestos:                podman port <id_contenedor>"
-	echo "   Ver IP de un contenedor:              podman inspect <nombre_contenedor> | grep IPAddress"
+}
+
+show_summary_chuleta() {
+    echo ""
+    echo -e "${YELLOW}📋 COMANDOS ÚTILES PARA PODMAN Y PODMAN-COMPOSE:${NC}"
+    echo ""
+    echo -e "${CYAN}🔹 CONTENEDORES:${NC}"
+    echo "   Ver logs en tiempo real:              podman logs -f <nombre_contenedor>"
+    echo "   Ver todos los contenedores:           podman ps -a"
+    echo "   Eliminar contenedor forzosamente:     podman rm -f <nombre_contenedor>"
+    echo "   Ver todas las imágenes:               podman images -a"
+    echo ""
+    echo -e "${CYAN}🔹 PODMAN-COMPOSE (trabajando con el stack):${NC}"
+    echo "   Levantar todos los servicios:         podman-compose up -d"
+    echo "   Detener todos los servicios:          podman-compose down"
+    echo "   Ver logs de un servicio específico:   podman-compose logs -f <servicio>"
+    echo "   Reconstruir y levantar:               podman-compose up -d --build"
+    echo "   Ver puertos expuestos:                podman port <id_contenedor>"
+    echo "   Ver IP de un contenedor:              podman inspect <nombre_contenedor> | grep IPAddress"
     echo ""
 }
 
@@ -317,6 +326,7 @@ run_completo() {
     
     # Tiempo total
     FECHA_FIN=$(date +"%Y-%m-%d %H:%M:%S")
+    show_summary
     echo -e "${BLUE}Tiempo total: $FECHA_INICIO - $FECHA_FIN${NC}"
     echo "=========================================="
 }
@@ -335,10 +345,10 @@ show_menu() {
     echo "	1	DESPLEGAR COMPLETO (limpiar todo y desplegar desde cero)"
     echo "	2	RECONSTRUIR SOLO APP (rápido, con JAR actualizado)"
     echo "	3	VER ESTADO DE CONTENEDORES"
-    echo "	4	ÚLTIMOS LOGS DE LA APP"
+    echo "	4	SINCRONIZAR DOCKER-COMPOSE JAR"
     echo "	5	SALIR"
-    show_summary
     echo "=============================================================="
+    show_summary_chuleta
 }
 
 main_with_menu() {
@@ -350,7 +360,7 @@ main_with_menu() {
             1)
                 echo ""
                 print_info "Ejecutando despliegue completo..."
-                run_completo  # Llamar a la función main original
+                run_completo
                 ;;
             2)
                 echo ""
@@ -361,14 +371,16 @@ main_with_menu() {
                 ;;
             4)
                 echo ""
-                cd "$PROYECTO_DIR" && podman-compose logs --tail=10 app
+                clean_directories
+                download_compose
+                download_jars
                 ;;
             5)
                 echo -e "${GREEN}¡Hasta luego!${NC}"
                 exit 0
                 ;;
             *)
-                print_error "Opción no válida. Por favor selecciona 1-9"
+                print_error "Opción no válida. Por favor selecciona 1-5"
                 sleep 2
                 ;;
         esac
