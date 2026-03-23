@@ -4,7 +4,7 @@ color 0A
 setlocal enabledelayedexpansion
 
 :: Variables setear rutas de proyecto y qemu
-set PROYECTO=C:\Users\UsuarioPC\Documents\REPOSITORIO\tarea-processor
+set PROYECTO=C:\Users\UsuarioPC\Documents\REPOSITORIO\message-processor
 set QEMU_DIR=C:\Users\UsuarioPC\Documents\REPOSITORIO\Utilitarios\qemu_app
 :: Variables globales para rutas (inicializadas con valores por defecto)
 set DISCO_IMG=%QEMU_DIR%\alpine-disk.qcow2
