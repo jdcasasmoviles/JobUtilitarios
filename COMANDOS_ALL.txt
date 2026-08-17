@@ -124,8 +124,8 @@ Listar topicos
 .\bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
 
 crear topico
-.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic sol --partitions 1 
-.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic respuesta --partitions 1 
+.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic mensajes-topic --partitions 1
+.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 -create --topic topic_consu_corr --partitions 1 
 
 Crear productor
 .\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic sol

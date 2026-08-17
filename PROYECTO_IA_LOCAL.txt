@@ -1,0 +1,35 @@
+Realiza un proyecto en Spring Boot,genera el código para una entidad llamada Producto con los campos id, nombre, fecharegistro, preciounitario y stock.
+Entidad JPA mapeada a MySQL.Repository JPA de Spring Data.ClienteDTO y su Mapper estático.Interface ClienteService e implementación ClienteServiceImpl 
+con operaciones CRUD completas y anotaciones @Transactional.Usa Lombok y la anotación @Autowired para inyección de dependencias.Implementa el controller.
+Las paginas html para el frontend deben usar bootstrap y thymeleaf.
+------------------------------------------------------------------------------------
+Instalar IA en windows 10
+1- Descargar https://ollama.com/download/windows
+2- Variables de entorno:
+Nombre: OLLAMA_MODELS
+Ruta: F:\MODELOS_IA
+2- Abre la terminal CMD o PowerShell
+Descargarlo sin ejecutarlo 
+ollama pull deepseek-coder:6.7b
+
+Para ejecutar el modelo
+ollama run deepseek-coder:6.7b
+
+Para confirmar que se descargó donde querías:
+ollama list
+
+3-Prueba de funcionamiento básico
+>>> Necesito la respuesta en español ¿Cuál es la capital de Perú?
+
+4- Comandos útiles dentro de Ollama
+Mientras chateas con el modelo, puedes usar estos comandos:
+Comando	Función
+/bye	Salir del chat
+/help	Mostrar ayuda de comandos
+/?	Alternativa rápida a /help
+/clear	Limpiar el historial de la conversación actual
+----------------------------------------------------------------------------------
+Guía de Configuración Paso a Paso en Visual Code
+Instala la extensión Continue:
+Abre VS Code y ve a la pestaña de Extensiones (el icono de los cuadrados en la barra lateral izquierda).
+Busca "Continue" y elige la extensión publicada por Continue Dev . Instálala y reinicia visual code.

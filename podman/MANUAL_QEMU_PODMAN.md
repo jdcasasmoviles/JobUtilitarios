@@ -199,6 +199,8 @@ qemu-system-x86_64.exe -m 4096 -smp 4 -hda alpine-disk.qcow2 -vga std -netdev us
 rm -rf /root/proyectos/executor_project.sh && cd /root/proyectos && wget http://10.0.2.2:8000/executor_project.sh
 cd /root/proyectos && chmod +x executor_project.sh && ./executor_project.sh
 
+chmod +x create_topic_schema.sh && ./create_topic_schema.sh
+
 
 -------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------------
@@ -272,12 +274,26 @@ java -jar kafka-ui.jar --kafka.clusters.0.name=vm-cluster --kafka.clusters.0.boo
 -----------------------------------------------------------------------------------
 
 $env:KAFKA_CLUSTERS_0_NAME = "vm-cluster"
-$env:KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS = "172.25.21.48:29092"
-$env:KAFKA_CLUSTERS_0_SCHEMAREGISTRY = "http://172.25.21.48:8081"
-$env:KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL = "PLAINTEXT"
-$env:KAFKA_CLUSTERS_0_PROPERTIES_BOOTSTRAP_SERVERS = "172.25.21.48:29092"
-$env:SERVER_PORT = 8085
+$env:KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS = "127.0.0.1:9092"
+$env:KAFKA_CLUSTERS_0_SCHEMAREGISTRY = "http://127.0.0.1:8081"
+$env:SERVER_PORT = 8086
 java -jar kafka-ui.jar
+
+java -jar kafka-ui.jar --server.port=8085
+
+java --add-opens java.rmi/javax.rmi.ssl=ALL-UNNAMED -jar kafka-ui.jar --server.port=8086 --KAFKA_CLUSTERS_0_NAME=local --KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=192.168.1.59:9092
+
+java --add-opens java.rmi/javax.rmi.ssl=ALL-UNNAMED -jar kafka-ui.jar --server.port=8086 --KAFKA_CLUSTERS_0_NAME=local --KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=localhost:29092
+
+java --add-opens java.rmi/javax.rmi.ssl=ALL-UNNAMED -jar api-v1.4.2.jar --server.port=8086 --kafka.clusters[0].name=local --kafka.clusters[0].bootstrapServers=192.168.1.59:9092 --kafka.clusters[0].readOnly=false
+
+
+java -jar kafdrop-4.2.0.jar --kafka.brokerConnect=192.168.1.59:9092 --server.port=8086
+
+java -jar kafka-ui.jar --kafka.brokerConnect=192.168.1.59:9092 --server.port=8086
+
+java -jar kafka-ui.jar --KAFKA_CLUSTERS_0_NAME=vm-cluster --KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=127.0.0.1:9092 --KAFKA_CLUSTERS_0_SCHEMAREGISTRY=http://127.0.0.1:8081 --SERVER_PORT=8086
+
 ------------------------------------------------------------------------------------------------
 podman exec -it kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic topic-jdc --from-beginning --max-messages 10
 
