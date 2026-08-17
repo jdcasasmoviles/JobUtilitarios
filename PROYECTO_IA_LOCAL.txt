@@ -15,6 +15,10 @@ ollama pull deepseek-coder:6.7b
 Para ejecutar el modelo
 ollama run deepseek-coder:6.7b
 
+probar modelos
+ollama pull phi4-mini:latest && ollama pull deepseek-r1:7b && ollama pull gemma3:latest && ollama pull qwen3:latest && ollama pull mistral:latest && ollama pull qwen2.5:7b
+
+
 Para confirmar que se descargó donde querías:
 ollama list
 
